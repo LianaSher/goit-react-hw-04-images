@@ -8,5 +8,5 @@ export const FetchData = async (search, page) => {
     `${BASE_URL}?key=${API_KEY}&q="${search}"&image_type=photo&orientation=horizontal&per_page=12&page=${page}`
   );
 
-  return response.data.hits;
+  return response.data;
 };

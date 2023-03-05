@@ -17,6 +17,7 @@ export class App extends Component {
     error: null,
     search: '',
     page: 1,
+    totalItems: null,
     isModalOpen: false,
     imgInModal: null,
   };
@@ -25,14 +26,13 @@ export class App extends Component {
     const { search, page } = this.state;
 
     if (prevState.search !== search || prevState.page !== page) {
-      if (prevState.search !== search) {
-        this.setState({ page: 1 });
-      }
-
       this.setState({ loading: true });
       FetchData(search, page)
         .then(data => {
-          return this.setState(({ items }) => ({ items: [...items, ...data] }));
+          this.setState(({ items }) => ({
+            items: [...items, ...data.hits],
+          }));
+          this.setState({ totalItems: data.totalHits });
         })
         .catch(error => this.setState({ error: error.message }))
         .finally(() => this.setState({ loading: false }));
@@ -43,8 +43,11 @@ export class App extends Component {
   };
 
   onLoadMoreClick = () => {
-    const nextPage = this.state.page + 1;
-    this.setState({ page: nextPage });
+    this.setState(prevState => {
+      return {
+        page: prevState.page + 1,
+      };
+    });
   };
 
   openModal = largeImageURL => {
@@ -62,18 +65,22 @@ export class App extends Component {
   };
 
   render() {
+    const { loading, error, items, totalItems, isModalOpen, imgInModal } =
+      this.state;
+    const { onSubmit, openModal, onLoadMoreClick, closeModal } = this;
+
     return (
       <AppStyled>
-        <Searchbar onSubmit={this.onSubmit} />
-        {this.state.loading && <Loader />}
-        {this.state.error && <p>{this.state.error}</p>}
-        <ImageGallery items={this.state.items} openModal={this.openModal} />
-        {this.state.items.length > 0 && (
-          <Button onClick={this.onLoadMoreClick} />
+        <Searchbar onSubmit={onSubmit} />
+        {loading && <Loader />}
+        {error && <p>{error}</p>}
+        <ImageGallery items={items} openModal={openModal} />
+        {totalItems > items.length && !loading && (
+          <Button onClick={onLoadMoreClick} />
         )}
-        {this.state.isModalOpen && (
-          <Modal closeModal={this.closeModal}>
-            <img src={this.state.imgInModal} alt="" />
+        {isModalOpen && (
+          <Modal closeModal={closeModal}>
+            <img src={imgInModal} alt="" />
           </Modal>
         )}
         <GlobalStyle />
