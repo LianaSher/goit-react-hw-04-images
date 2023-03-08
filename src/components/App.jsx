@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useState, useEffect } from 'react';
 
 import { GlobalStyle } from '../GlobalStyles';
 import { AppStyled } from '../components/App.styled';
@@ -10,81 +10,69 @@ import { Button } from '../components/Button/Button';
 import { Modal } from '../components/Modal/Modal';
 import { Loader } from '../components/servises/Loader';
 
-export class App extends Component {
-  state = {
-    items: [],
-    loading: false,
-    error: null,
-    search: '',
-    page: 1,
-    totalItems: null,
-    isModalOpen: false,
-    imgInModal: null,
+export const App = () => {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [imgInModal, setImgInModal] = useState(null);
+
+  const onSubmit = ({ search }) => {
+    setSearch(search);
+    setItems([]);
+    setPage(1);
   };
 
-  componentDidUpdate(_, prevState) {
-    const { search, page } = this.state;
+  useEffect(() => {
+    if (!search) return;
 
-    if (prevState.search !== search || prevState.page !== page) {
-      this.setState({ loading: true });
-      FetchData(search, page)
-        .then(data => {
-          this.setState(({ items }) => ({
-            items: [...items, ...data.hits],
-          }));
-          this.setState({ totalItems: data.totalHits });
-        })
-        .catch(error => this.setState({ error: error.message }))
-        .finally(() => this.setState({ loading: false }));
-    }
-  }
-  onSubmit = ({ search }) => {
-    this.setState({ search: search, items: [], page: 1 });
+    const fetchImages = async () => {
+      try {
+        setLoading(true);
+        const data = await FetchData(search, page);
+        setTotalItems(data.totalHits);
+        setItems(prevItems => [...prevItems, ...data.hits]);
+      } catch (error) {
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchImages();
+  }, [search, page]);
+
+  const onLoadMoreClick = () => {
+    setPage(prevPage => prevPage + 1);
   };
 
-  onLoadMoreClick = () => {
-    this.setState(prevState => {
-      return {
-        page: prevState.page + 1,
-      };
-    });
+  const openModal = largeImageURL => {
+    setIsModalOpen(true);
+    setImgInModal(largeImageURL);
   };
 
-  openModal = largeImageURL => {
-    this.setState({
-      isModalOpen: true,
-      imgInModal: largeImageURL,
-    });
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setImgInModal(null);
   };
 
-  closeModal = event => {
-    this.setState({
-      isModalOpen: false,
-      imgInModal: null,
-    });
-  };
-
-  render() {
-    const { loading, error, items, totalItems, isModalOpen, imgInModal } =
-      this.state;
-    const { onSubmit, openModal, onLoadMoreClick, closeModal } = this;
-
-    return (
-      <AppStyled>
-        <Searchbar onSubmit={onSubmit} />
-        {loading && <Loader />}
-        {error && <p>{error}</p>}
-        <ImageGallery items={items} openModal={openModal} />
-        {totalItems > items.length && !loading && (
-          <Button onClick={onLoadMoreClick} />
-        )}
-        {isModalOpen && (
-          <Modal closeModal={closeModal}>
-            <img src={imgInModal} alt="" />
-          </Modal>
-        )}
-        <GlobalStyle />
-      </AppStyled>
-    );
-  }
-}
+  return (
+    <AppStyled>
+      <Searchbar onSubmit={onSubmit} />
+      {loading && <Loader />}
+      {error && <p>{error}</p>}
+      <ImageGallery items={items} openModal={openModal} />
+      {totalItems > items.length && !loading && (
+        <Button onClick={onLoadMoreClick} />
+      )}
+      {isModalOpen && (
+        <Modal closeModal={closeModal}>
+          <img src={imgInModal} alt="" />
+        </Modal>
+      )}
+      <GlobalStyle />
+    </AppStyled>
+  );
+};
